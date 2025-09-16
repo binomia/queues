@@ -1,5 +1,5 @@
 import { TransactionJoiSchema } from "@/auth/transactionJoiSchema"
-import { NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL, REDIS_SUBSCRIPTION_CHANNEL, ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY, ZERO_SIGN_PUBLIC_KEY } from "@/constants"
+import { ANOMALY_THRESHOLD, NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL, REDIS_SUBSCRIPTION_CHANNEL, ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY, ZERO_SIGN_PUBLIC_KEY } from "@/constants"
 import { calculateDistance, calculateSpeed, fetchGeoLocation, FORMAT_CURRENCY, insertLadger, MAKE_FULL_NAME_SHORTEN } from "@/helpers"
 import { AccountModel, BankingTransactionsModel, QueuesModel, SessionModel, TransactionsModel, UsersModel } from "@/models"
 import { transactionsQueue } from "@/queues"
@@ -375,21 +375,23 @@ export default class TransactionController {
                 distance
             }
 
+            const duration = +(distance / Math.max(speed, 1) * 3600).toFixed(2);
+            const platform = ["ios", "android", "web"].indexOf(device.platform.toLowerCase())
+            const differentPlatform = device.platform.toLowerCase() !== lastTransactionJSON?.platform ? 1 : 0
+            const amount = +Number(transaction.amount).toFixed(2)
 
-            const features = await TransactionJoiSchema.transactionFeatures.parseAsync({
-                speed: lastTransactionJSON?.status === "audited" ? 0 : +Number(speed).toFixed(2),
-                distance: lastTransactionJSON?.status === "audited" ? 0 : +Number(distance).toFixed(2),
-                amount: +Number(transaction.amount).toFixed(2),
-                currency: ["dop", "usd"].indexOf(transaction.currency.toLowerCase()),
-                transactionType: ["transfer", "request", "withdrawal", "deposit"].indexOf(transaction.transactionType.toLowerCase()),
-                platform: ["ios", "android", "web"].indexOf(device.platform.toLowerCase()),
-                isRecurring: transaction.isRecurring ? 1 : 0,
+            const featuresObject = await TransactionJoiSchema.transactionFeatures.parseAsync({
+                speed,
+                distance,
+                duration,
+                platform,
+                differentPlatform,
+                amount
             })
 
-            const detectedFraudulentTransaction = await anomalyRpcClient("detect_fraudulent_transaction", {
-                features: Object.values(features)
-            })
+            const features = Object.values(featuresObject)
 
+            const detectedFraudulentTransaction = await anomalyRpcClient("predictTransaction", features)
             const transactionCreated = await TransactionsModel.create(newTransactionData)
             const transactionData = await transactionCreated.reload({
                 include: [
@@ -412,28 +414,27 @@ export default class TransactionController {
                 ]
             })
 
-            if (detectedFraudulentTransaction.last_transaction_features)
-                await transactionsQueue.createJobs({
-                    jobId: `trainTransactionFraudDetectionModel@${shortUUID.generate()}${shortUUID.generate()}`,
-                    jobName: "trainTransactionFraudDetectionModel",
-                    jobTime: "trainTransactionFraudDetectionModel",
-                    referenceData: null,
-                    userId: senderAccount.toJSON().user.id,
-                    amount: +Number(transaction.amount).toFixed(4),
-                    data: {
-                        last_transaction_features: JSON.stringify(detectedFraudulentTransaction.last_transaction_features)
-                    }
-                })
+            await transactionsQueue.createJobs({
+                jobId: `trainTransactionFraudDetectionModel@${shortUUID.generate()}${shortUUID.generate()}`,
+                jobName: "trainTransactionFraudDetectionModel",
+                jobTime: "trainTransactionFraudDetectionModel",
+                referenceData: null,
+                userId: senderAccount.toJSON().user.id,
+                amount: +Number(transaction.amount).toFixed(4),
+                data: {
+                    last_transaction_features: JSON.stringify(lastTransactionJSON?.features),
+                }
+            })
 
-            if (detectedFraudulentTransaction.is_fraud) {
+            if (detectedFraudulentTransaction.valid < ANOMALY_THRESHOLD) {
                 await Promise.all([
                     senderAccount.update({
                         status: "flagged"
                     }),
                     transactionCreated.update({
                         status: "suspicious",
-                        features: JSON.stringify(detectedFraudulentTransaction.features),
-                        fraudScore: detectedFraudulentTransaction.fraud_score
+                        features: JSON.stringify(features),
+                        fraudScore: detectedFraudulentTransaction.valid
                     })
                 ])
 
@@ -446,8 +447,8 @@ export default class TransactionController {
 
                 return Object.assign({}, transactionData.toJSON(), {
                     status: "suspicious",
-                    features: JSON.stringify(detectedFraudulentTransaction.features),
-                    fraudScore: detectedFraudulentTransaction.fraud_score
+                    features: JSON.stringify(features),
+                    fraudScore: detectedFraudulentTransaction.valid
                 })
 
             } else {
@@ -456,8 +457,8 @@ export default class TransactionController {
                 }
 
                 await transactionCreated.update({
-                    features: JSON.stringify(detectedFraudulentTransaction.features),
-                    fraudScore: detectedFraudulentTransaction.fraud_score
+                    features: JSON.stringify(features),
+                    fraudScore: detectedFraudulentTransaction.valid
                 })
 
                 const newSenderPendingBalance = Number((senderAccountJSON.pendingBalance - transaction.amount).toFixed(4))

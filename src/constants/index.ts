@@ -15,6 +15,7 @@ export const GOOGLE_MAPS_API_KEY: string = process.env.GOOGLE_MAPS_API_KEY || ""
 export const DASHBOARD_LOGO_URL: string = "https://res.cloudinary.com/brayhandeaza/image/upload/v1734925393/gwxyuqagrvxxwq2xps6f.png";
 export const DASHBOARD_FAVICON_URL: string = 'https://res.cloudinary.com/brayhandeaza/image/upload/v1731649234/yphdze0x2k2unxwoj6vy.png';
 
+export const ANOMALY_THRESHOLD: number = 0.7
 
 export const REDIS_SUBSCRIPTION_CHANNEL = {
     TRANSACTION_CREATED: "TRANSACTION_CREATED",

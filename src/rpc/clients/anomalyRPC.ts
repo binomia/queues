@@ -1,21 +1,22 @@
-import axios from "axios";
-import shortUUID from "short-uuid";
-import { ANOMALY_SERVER_URL } from "@/constants";
+import { ANOMALY_SERVER_URL, ZERO_ENCRYPTION_KEY } from "@/constants";
+import { Client, LOAD_BALANCER } from "cromio"
 
 
+const client = new Client({
+    loadBalancerStrategy: LOAD_BALANCER.BEST_BIASED,
+    servers: [
+        {
+            url: ANOMALY_SERVER_URL,
+            secretKey: ZERO_ENCRYPTION_KEY,
+        }
+    ]
+});
 
-export const anomalyRpcClient = async (method: string, params: any) => {
+
+export const anomalyRpcClient = async (trigger: string, params: any): Promise<{valid: number, fraud: number}> => {
     try {
-        console.log({ ANOMALY_SERVER_URL });
-
-        const { data } = await axios.post(ANOMALY_SERVER_URL, {
-            id: shortUUID.generate(),
-            jsonrpc: "2.0",
-            method,
-            params
-        });
-
-        return data.result
+        const response: any = await client.trigger(trigger, params);
+        return response
 
     } catch (error: any) {
         throw new Error(error);
