@@ -1,5 +1,5 @@
 import { ANOMALY_SERVER_URL, ZERO_ENCRYPTION_KEY } from "@/constants";
-import { Client, LOAD_BALANCER } from "cromio"
+import { Client, LOAD_BALANCER, ClientTypes } from "cromio"
 
 
 const client = new Client({
@@ -13,9 +13,14 @@ const client = new Client({
 });
 
 
-export const anomalyRpcClient = async (trigger: string, params: any): Promise<{valid: number, fraud: number}> => {
+type ResponseDataType = {
+    data: { valid: number, fraud: number }
+}
+
+
+export const anomalyRpcClient = async (trigger: string, params: any): Promise<ClientTypes.TriggerResponseType> => {
     try {
-        const response: any = await client.trigger(trigger, params);
+        const response = await client.trigger(trigger, params);
         return response
 
     } catch (error: any) {

@@ -380,18 +380,21 @@ export default class TransactionController {
             const differentPlatform = device.platform.toLowerCase() !== lastTransactionJSON?.platform ? 1 : 0
             const amount = +Number(transaction.amount).toFixed(2)
 
-            const featuresObject = await TransactionJoiSchema.transactionFeatures.parseAsync({
+            const featuresObject = {
                 speed,
                 distance,
                 duration,
                 platform,
                 differentPlatform,
                 amount
-            })
+            }
 
             const features = Object.values(featuresObject)
+            const predictTransaction = await anomalyRpcClient("predictTransaction", features)
+            if (predictTransaction.error !== undefined)
+                throw predictTransaction.error
 
-            const detectedFraudulentTransaction = await anomalyRpcClient("predictTransaction", features)
+            const predictTransactionScore: { valid: number, fraud: number } = predictTransaction.data
             const transactionCreated = await TransactionsModel.create(newTransactionData)
             const transactionData = await transactionCreated.reload({
                 include: [
@@ -426,7 +429,7 @@ export default class TransactionController {
                 }
             })
 
-            if (detectedFraudulentTransaction.valid < ANOMALY_THRESHOLD) {
+            if (predictTransactionScore.valid < ANOMALY_THRESHOLD) {
                 await Promise.all([
                     senderAccount.update({
                         status: "flagged"
@@ -434,7 +437,7 @@ export default class TransactionController {
                     transactionCreated.update({
                         status: "suspicious",
                         features: JSON.stringify(features),
-                        fraudScore: detectedFraudulentTransaction.valid
+                        fraudScore: predictTransactionScore.valid
                     })
                 ])
 
@@ -448,7 +451,7 @@ export default class TransactionController {
                 return Object.assign({}, transactionData.toJSON(), {
                     status: "suspicious",
                     features: JSON.stringify(features),
-                    fraudScore: detectedFraudulentTransaction.valid
+                    fraudScore: predictTransactionScore.valid
                 })
 
             } else {
@@ -458,7 +461,7 @@ export default class TransactionController {
 
                 await transactionCreated.update({
                     features: JSON.stringify(features),
-                    fraudScore: detectedFraudulentTransaction.valid
+                    fraudScore: predictTransactionScore.valid
                 })
 
                 const newSenderPendingBalance = Number((senderAccountJSON.pendingBalance - transaction.amount).toFixed(4))
@@ -483,7 +486,7 @@ export default class TransactionController {
                         afterBalance: newReceiverBalance,
                         latitude: transaction.location.latitude,
                         longitude: transaction.location.longitude,
-                        anomalies: detectedFraudulentTransaction,
+                        anomalies: predictTransactionScore,
                     },
                     receiver: {
                         amount: transaction.amount,
