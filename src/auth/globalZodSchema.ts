@@ -22,7 +22,7 @@ export class GlobalZodSchema {
         ZERO_SIGN_PUBLIC_KEY: z.string(),
         REDIS_HOST: z.string(),
         REDIS_PORT: z.string(),
-        PORT: z.string()
+        QUEUE_SERVER_PORT: z.string()
     })
 
     static bullDashboard = z.object({

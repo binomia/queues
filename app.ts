@@ -159,8 +159,8 @@ if (cluster.isPrimary) {
         }
     });
 
-    const PORT = process.env.PORT || 8002
-    app.listen(PORT, () => {
-        console.log(`[Queue-Server]: worker ${process.pid} is running at http://localhost:${PORT}`);
+    const QUEUE_SERVER_PORT = process.env.QUEUE_SERVER_PORT || 8002
+    app.listen(QUEUE_SERVER_PORT, () => {
+        console.log(`[Queue-Server]: worker ${process.pid} is running at http://localhost:${QUEUE_SERVER_PORT}`);
     });
 }

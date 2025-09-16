@@ -1,4 +1,4 @@
-import topUpsTriggerDefinition from "./topups/"
+import topUpsTriggerDefinition from "./topups"
 
 
 export {

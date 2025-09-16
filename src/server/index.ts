@@ -2,9 +2,9 @@ import { Server } from "cromio";
 import { mTLS, clients } from "./utils";
 import { topUpsTriggerDefinition } from "./triggers";
 
-const PORT = Number(process.env.PORT || 8002)
+const QUEUE_SERVER_PORT = Number(process.env.QUEUE_SERVER_PORT || 8002)
 export const server = new Server({
-    port: Number(PORT),
+    port: Number(QUEUE_SERVER_PORT),
     tls: mTLS,
     clients
 })
