@@ -425,7 +425,7 @@ export default class TransactionController {
                 userId: senderAccount.toJSON().user.id,
                 amount: +Number(transaction.amount).toFixed(4),
                 data: {
-                    last_transaction_features: JSON.stringify(lastTransactionJSON?.features),
+                    last_transaction_features: JSON.stringify(lastTransactionJSON?.features || []),
                 }
             })
 
