@@ -11,11 +11,13 @@ export const createQueue = (name: string): Queue => {
 
 export const transactionsQueue = new TransactionsQueue()
 export const topUpQueue = new TopUpQueue()
+const queue = new Queue("notifications", { connection: { host: "redis", port: 6379 } });
 
 
 export const queuesBullAdapter = [
     new BullMQAdapter(transactionsQueue.queue),
-    new BullMQAdapter(topUpQueue.queue)
+    new BullMQAdapter(topUpQueue.queue),
+    new BullMQAdapter(queue)
 ];
 
 
