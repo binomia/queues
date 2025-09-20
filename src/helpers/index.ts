@@ -6,6 +6,11 @@ import axios from 'axios';
 import { GOOGLE_MAPS_API_KEY } from '@/constants';
 import * as zlib from 'zlib';
 import { LedgerModel } from '@/models';
+import { Queue } from 'bullmq';
+import { connection } from '@/redis';
+
+
+export const notificationsQueue = new Queue("notifications", { connection });
 
 
 export const insertLadger = async ({ sender, receiver }: any) => {

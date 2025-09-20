@@ -13,10 +13,6 @@ const client = new Client({
 });
 
 
-type ResponseDataType = {
-    data: { valid: number, fraud: number }
-}
-
 
 export const anomalyRpcClient = async (trigger: string, params: any): Promise<ClientTypes.TriggerResponseType> => {
     try {

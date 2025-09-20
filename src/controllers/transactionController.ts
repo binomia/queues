@@ -1,18 +1,15 @@
 import { TransactionJoiSchema } from "@/auth/transactionJoiSchema"
-import { ANOMALY_THRESHOLD, NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL, REDIS_SUBSCRIPTION_CHANNEL, ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY, ZERO_SIGN_PUBLIC_KEY } from "@/constants"
-import { calculateDistance, calculateSpeed, fetchGeoLocation, FORMAT_CURRENCY, insertLadger, MAKE_FULL_NAME_SHORTEN } from "@/helpers"
+import { ANOMALY_THRESHOLD, NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL, ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY, ZERO_SIGN_PUBLIC_KEY } from "@/constants"
+import { calculateDistance, calculateSpeed, fetchGeoLocation, FORMAT_CURRENCY, insertLadger, MAKE_FULL_NAME_SHORTEN, notificationsQueue } from "@/helpers"
 import { AccountModel, BankingTransactionsModel, QueuesModel, SessionModel, TransactionsModel, UsersModel } from "@/models"
 import { transactionsQueue } from "@/queues"
 import { anomalyRpcClient } from "@/rpc/clients/anomalyRPC"
-import { notificationServer } from "@/rpc/clients/notificationRPC"
-import { CancelRequestedTransactionType, CreateBankingTransactionType, CreateRequestQueueedTransactionType, CreateTransactionType, FraudulentTransactionType } from "@/types"
-import { Job, JobJson, Queue } from "bullmq"
+import { CancelRequestedTransactionType, CreateBankingTransactionType, CreateRequestQueueedTransactionType, CreateTransactionType } from "@/types"
+import { Job, JobJson } from "bullmq"
 import { Op } from "sequelize"
 import shortUUID from "short-uuid"
 import { AES, ECC, HASH, RSA } from "cryptografia"
-import { connection } from "@/redis"
 
-const notificationsQueue = new Queue("notifications", { connection });
 
 export default class TransactionController {
     static createTransaction = async (data: CreateTransactionType) => {
@@ -90,20 +87,28 @@ export default class TransactionController {
                 ]
             })
 
-            await Promise.all([
-                notificationServer("socketEventEmitter", {
-                    data: transactionData.toJSON(),
-                    channel: REDIS_SUBSCRIPTION_CHANNEL.TRANSACTION_CREATED,
-                    senderSocketRoom: senderAccount.toJSON().username,
-                    recipientSocketRoom: receiverAccount.toJSON().username
-                }),
-                notificationServer("socketEventEmitter", {
-                    data: transactionData.toJSON(),
-                    channel: REDIS_SUBSCRIPTION_CHANNEL.TRANSACTION_CREATED_FROM_QUEUE,
-                    senderSocketRoom: senderAccount.toJSON().username,
-                    recipientSocketRoom: receiverAccount.toJSON().username
-                })
-            ])
+            const transactionEncryptedData = await AES.encryptAsync(JSON.stringify({
+                transaction: transactionData.toJSON(),
+                channel: "transactionNotification",
+                senderSocketRoom: senderAccount.toJSON().username,
+                recipientSocketRoom: receiverAccount.toJSON().username
+            }), ZERO_ENCRYPTION_KEY);
+
+            const jobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
+            notificationsQueue.add(jobId, transactionEncryptedData, {
+                jobId,
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 1000,
+                },
+                removeOnComplete: {
+                    age: 20 // 30 minutes
+                },
+                removeOnFail: {
+                    age: 60 * 30 // 24 hours
+                },
+            })
 
             return transactionData.toJSON()
 
@@ -445,12 +450,28 @@ export default class TransactionController {
                     })
                 ])
 
-
-                await notificationServer("socketEventEmitter", {
-                    data: transactionData.toJSON(),
+                const notificationEncryptedData = await AES.encryptAsync(JSON.stringify({
+                    type: "transactionNotification",
+                    transaction: transactionData.toJSON(),
                     channel: NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL.NOTIFICATION_TRANSACTION_CREATED,
                     senderSocketRoom: senderAccount.toJSON().user.username,
                     recipientSocketRoom: senderAccount.toJSON().user.username
+                }), ZERO_ENCRYPTION_KEY);
+
+                const transactionJobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
+                notificationsQueue.add(transactionJobId, notificationEncryptedData, {
+                    jobId: transactionJobId,
+                    attempts: 3,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 1000,
+                    },
+                    removeOnComplete: {
+                        age: 20 // 30 minutes
+                    },
+                    removeOnFail: {
+                        age: 60 * 30 // 24 hours
+                    },
                 })
 
                 return Object.assign({}, transactionData.toJSON(), {
@@ -511,13 +532,14 @@ export default class TransactionController {
 
                 const encryptedData = await AES.encryptAsync(JSON.stringify({ transactionId: transactionData.toJSON().transactionId }), ZERO_ENCRYPTION_KEY);
                 const notificationEncryptedData = await AES.encryptAsync(JSON.stringify({
+                    type: "transactionNotification",
                     transaction: transactionData.toJSON(),
                     channel: NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL.NOTIFICATION_TRANSACTION_CREATED,
                     senderSocketRoom: senderAccount.toJSON().user.username,
                     recipientSocketRoom: receiverAccount.toJSON().user.username
                 }), ZERO_ENCRYPTION_KEY);
 
-                const transactionJobId = `notifications@${shortUUID.generate()}${shortUUID.generate()}`
+                const transactionJobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
                 await Promise.all([
                     notificationsQueue.add(transactionJobId, notificationEncryptedData, {
                         jobId: transactionJobId,
@@ -629,8 +651,25 @@ export default class TransactionController {
                 })
 
                 const expoNotificationTokens: { token: string, message: string }[] = receiverSession.map((obj: any) => ({ token: obj.dataValues.expoNotificationToken, message: `${MAKE_FULL_NAME_SHORTEN(receiverAccount.toJSON().user.fullName)} te ha enviado ${FORMAT_CURRENCY(transaction.amount)} pesos` }));
-                await notificationServer("newTransactionNotification", {
+                const newTransactionNotificationData = {
+                    jobId: `newTransactionNotification@${shortUUID.generate()}${shortUUID.generate()}`,
                     data: expoNotificationTokens
+                }
+
+                const newTransactionNotificationEncryptedData = await AES.encryptAsync(JSON.stringify(newTransactionNotificationData.data), ZERO_ENCRYPTION_KEY);
+                await notificationsQueue.add(newTransactionNotificationData.jobId, newTransactionNotificationEncryptedData, {
+                    jobId: newTransactionNotificationData.jobId,
+                    attempts: 3,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 1000,
+                    },
+                    removeOnComplete: {
+                        age: 20 // 30 minutes
+                    },
+                    removeOnFail: {
+                        age: 60 * 30 // 24 hours
+                    },
                 })
             }
 
@@ -715,16 +754,50 @@ export default class TransactionController {
                 }
             })
 
-            const expoNotificationTokens: { token: string, message: string }[] = receiverSession.map((obj: any) => ({ token: obj.dataValues.expoNotificationToken, message: `${MAKE_FULL_NAME_SHORTEN(receiverData.user.fullName)} te ha solicitado ${FORMAT_CURRENCY(transaction.amount)} pesos` }));
+            const expoNotificationTokens: { token: string, message: string }[] = receiverSession.map((obj: any) => ({ token: obj.dataValues.expoNotificationToken, message: `${MAKE_FULL_NAME_SHORTEN(receiverData.user.username)} te ha enviado ${FORMAT_CURRENCY(transaction.amount)} pesos` }));
+            const newTransactionNotificationData = {
+                jobId: `newTransactionNotification@${shortUUID.generate()}${shortUUID.generate()}`,
+                data: expoNotificationTokens
+            }
+
+            const newTransactionNotificationEncryptedData = await AES.encryptAsync(JSON.stringify(newTransactionNotificationData.data), ZERO_ENCRYPTION_KEY);
+            const transactionJobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
+
+            const notificationEncryptedData = await AES.encryptAsync(JSON.stringify({
+                transaction: transactionCreated.toJSON(),
+                channel: NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL.NOTIFICATION_QUEUE_TRANSACTION_CREATED,
+                senderSocketRoom: sender.username,
+                recipientSocketRoom: receiverData.user.username,
+            }), ZERO_ENCRYPTION_KEY);
+
             await Promise.all([
-                notificationServer("newTransactionNotification", {
-                    data: expoNotificationTokens
+                notificationsQueue.add(newTransactionNotificationData.jobId, newTransactionNotificationEncryptedData, {
+                    jobId: newTransactionNotificationData.jobId,
+                    attempts: 3,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 1000,
+                    },
+                    removeOnComplete: {
+                        age: 20 // 30 minutes
+                    },
+                    removeOnFail: {
+                        age: 60 * 30 // 24 hours
+                    },
                 }),
-                notificationServer("socketEventEmitter", {
-                    data: transactionCreated.toJSON(),
-                    channel: NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL.NOTIFICATION_QUEUE_TRANSACTION_CREATED,
-                    senderSocketRoom: sender.username,
-                    recipientSocketRoom: receiverData.user.username,
+                notificationsQueue.add(transactionJobId, notificationEncryptedData, {
+                    jobId: transactionJobId,
+                    attempts: 3,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 1000,
+                    },
+                    removeOnComplete: {
+                        age: 20 // 30 minutes
+                    },
+                    removeOnFail: {
+                        age: 60 * 30 // 24 hours
+                    }
                 })
             ])
 
@@ -767,22 +840,55 @@ export default class TransactionController {
                 throw "transaction not found"
 
             if (transaction.toJSON().status !== "requested") {
-                await notificationServer("socketEventEmitter", {
-                    data: transaction.toJSON(),
+                const transactionJobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
+                const notificationEncryptedData = await AES.encryptAsync(JSON.stringify({
+                    transaction: transaction.toJSON(),
                     channel: NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL.NOTIFICATION_TRANSACTION_REQUEST_CANCELED,
                     senderSocketRoom: senderUsername,
                     recipientSocketRoom: transaction.toJSON().to.user.username,
+                }), ZERO_ENCRYPTION_KEY);
+
+                await notificationsQueue.add(transactionJobId, notificationEncryptedData, {
+                    jobId: transactionJobId,
+                    attempts: 3,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 1000,
+                    },
+                    removeOnComplete: {
+                        age: 20 // 30 minutes
+                    },
+                    removeOnFail: {
+                        age: 60 * 30 // 24 hours
+                    }
                 })
 
                 return transaction.toJSON()
             }
 
             await transaction.update({ status: "cancelled" })
-            await notificationServer("socketEventEmitter", {
-                data: (await transaction.reload()).toJSON(),
+
+            const transactionJobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
+            const notificationEncryptedData = await AES.encryptAsync(JSON.stringify({
+                transaction: (await transaction.reload()).toJSON(),
                 channel: NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL.NOTIFICATION_TRANSACTION_REQUEST_CANCELED,
                 senderSocketRoom: senderUsername,
                 recipientSocketRoom: transaction.toJSON().to.user.username,
+            }), ZERO_ENCRYPTION_KEY);
+
+            await notificationsQueue.add(transactionJobId, notificationEncryptedData, {
+                jobId: transactionJobId,
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 1000,
+                },
+                removeOnComplete: {
+                    age: 20 // 30 minutes
+                },
+                removeOnFail: {
+                    age: 60 * 30 // 24 hours
+                }
             })
 
             return transaction.toJSON()
@@ -873,11 +979,27 @@ export default class TransactionController {
                     status: "cancelled"
                 })
 
-                await notificationServer("socketEventEmitter", {
-                    data: transaction.toJSON(),
+                const transactionJobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
+                const notificationEncryptedData = await AES.encryptAsync(JSON.stringify({
+                    transaction: transaction.toJSON(),
                     channel: NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL.NOTIFICATION_TRANSACTION_REQUEST_CANCELED,
                     senderSocketRoom: senderAccount.toJSON().user.username,
                     recipientSocketRoom: receiverAccount.toJSON().user.username
+                }), ZERO_ENCRYPTION_KEY);
+
+                await notificationsQueue.add(transactionJobId, notificationEncryptedData, {
+                    jobId: transactionJobId,
+                    attempts: 3,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 1000,
+                    },
+                    removeOnComplete: {
+                        age: 20 // 30 minutes
+                    },
+                    removeOnFail: {
+                        age: 60 * 30 // 24 hours
+                    }
                 })
 
                 const transactionData = await transaction.reload({
@@ -941,12 +1063,28 @@ export default class TransactionController {
 
                 const encryptedData = await AES.encryptAsync(JSON.stringify({ transactionId: transactionData.toJSON().transactionId }), ZERO_ENCRYPTION_KEY);
 
+                const transactionJobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
+                const notificationEncryptedData = await AES.encryptAsync(JSON.stringify({
+                    transaction: transaction.toJSON(),
+                    channel: NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL.NOTIFICATION_TRANSACTION_REQUEST_PAIED,
+                    senderSocketRoom: senderAccount.toJSON().user.username,
+                    recipientSocketRoom: receiverAccount.toJSON().user.username
+                }), ZERO_ENCRYPTION_KEY);
+
                 await Promise.all([
-                    notificationServer("socketEventEmitter", {
-                        data: transaction.toJSON(),
-                        channel: NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL.NOTIFICATION_TRANSACTION_REQUEST_PAIED,
-                        senderSocketRoom: senderAccount.toJSON().user.username,
-                        recipientSocketRoom: receiverAccount.toJSON().user.username
+                    notificationsQueue.add(transactionJobId, notificationEncryptedData, {
+                        jobId: transactionJobId,
+                        attempts: 3,
+                        backoff: {
+                            type: 'exponential',
+                            delay: 1000,
+                        },
+                        removeOnComplete: {
+                            age: 20 // 30 minutes
+                        },
+                        removeOnFail: {
+                            age: 60 * 30 // 24 hours
+                        }
                     }),
                     transactionsQueue.createJobs({
                         jobId: `pendingTransaction@${shortUUID.generate()}${shortUUID.generate()}`,
