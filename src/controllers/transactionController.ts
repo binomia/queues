@@ -370,7 +370,6 @@ export default class TransactionController {
                 transactionType: transaction.transactionType,
                 currency: transaction.currency,
                 location: transaction.location,
-
                 signature: transaction.signature,
                 deviceId: device.deviceId,
                 ipAddress: device.ipAddress,
@@ -380,7 +379,8 @@ export default class TransactionController {
                 previousBalance: senderAccount.toJSON().balance,
                 fraudScore: 0,
                 speed,
-                distance
+                distance,
+                device
             }
 
             const duration = +(distance / Math.max(speed, 1) * 3600).toFixed(2);
@@ -721,7 +721,7 @@ export default class TransactionController {
                 location: transaction.location,
                 status: "requested",
                 signature: transaction.signature,
-
+                device,
                 deviceId: device.deviceId,
                 ipAddress: device.ipAddress,
                 isRecurring: transaction.isRecurring,
