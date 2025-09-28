@@ -1,7 +1,6 @@
 import { DATE, STRING, JSONB, TEXT, BOOLEAN } from "sequelize"
 import { db } from "@/config"
 
-
 const SessionModel = db.define('sessions', {
 	verified: {
 		type: BOOLEAN,
@@ -12,7 +11,11 @@ const SessionModel = db.define('sessions', {
 	expoNotificationToken: STRING,
 	jwt: TEXT,
 	expires: DATE,
-	data: JSONB
+	data: JSONB,
+	signingKey: {
+		type: TEXT,
+		allowNull: false
+	}
 })
 
 
