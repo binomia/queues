@@ -636,6 +636,7 @@ export default class TransactionController {
                         [Op.and]: [
                             { userId: receiverAccount.toJSON().user.id },
                             { verified: true },
+                            { status: "active" },
                             {
                                 expires: {
                                     [Op.gt]: Date.now()
