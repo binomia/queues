@@ -6,10 +6,14 @@ import {DOCKER_MODE} from "@/constants";
 export const connection = {
     host: DOCKER_MODE ? "redis" : "localhost",
     port: 6379,
-    enableOfflineQueue: false,
+    // enableOfflineQueue: false,
 }
 
-export const redis = new Redis(connection)
+
+export const redis = new Redis({
+    host: connection.host,
+    port: connection.port
+})
 
 export const initRedisEventSubscription = async (bullDashboard: ReturnType<typeof createBullBoard>) => {
     process.on("message", async ({channel, payload}: { channel: string, payload: string }) => {
