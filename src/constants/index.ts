@@ -11,6 +11,7 @@ export const ZERO_SIGN_PRIVATE_KEY: string = process.env.ZERO_SIGN_PRIVATE_KEY |
 export const NOTIFICATION_SERVER_URL: string = process.env.NOTIFICATION_SERVER_URL || "";
 export const ANOMALY_SERVER_URL: string = process.env.ANOMALY_SERVER_URL || ""
 export const GOOGLE_MAPS_API_KEY: string = process.env.GOOGLE_MAPS_API_KEY || ""
+export const DOCKER_MODE: boolean = process.env.DOCKER_MODE === "true";
 
 export const DASHBOARD_LOGO_URL: string = "https://res.cloudinary.com/brayhandeaza/image/upload/v1734925393/gwxyuqagrvxxwq2xps6f.png";
 export const DASHBOARD_FAVICON_URL: string = 'https://res.cloudinary.com/brayhandeaza/image/upload/v1731649234/yphdze0x2k2unxwoj6vy.png';
@@ -21,7 +22,7 @@ export const REDIS_SUBSCRIPTION_CHANNEL = {
     TRANSACTION_CREATED: "TRANSACTION_CREATED",
     TRANSACTION_CREATED_FROM_QUEUE: "TRANSACTION_CREATED_FROM_QUEUE",
     LOGIN_VERIFICATION_CODE: "LOGIN_VERIFICATION_CODE",
-    TRANSACTION_REQUEST_PAIED: "TRANSACTION_REQUEST_PAIED",
+    TRANSACTION_REQUEST_PAIED: "TRANSACTION_REQUEST_PAID",
     TRANSACTION_REQUEST_CANCELED: "TRANSACTION_REQUEST_CANCELED",
 }
 

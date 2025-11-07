@@ -1,17 +1,17 @@
-import { Job, Queue, Worker } from "bullmq";
-import { MonthlyQueueTitleType, WeeklyQueueTitleType } from "@/types";
-import { CRON_JOB_BIWEEKLY_PATTERN, CRON_JOB_MONTHLY_PATTERN, CRON_JOB_WEEKLY_PATTERN } from "@/constants";
+import {Job, Queue, Worker} from "bullmq";
+import {MonthlyQueueTitleType, WeeklyQueueTitleType} from "@/types";
+import {CRON_JOB_BIWEEKLY_PATTERN, CRON_JOB_MONTHLY_PATTERN, CRON_JOB_WEEKLY_PATTERN} from "@/constants";
 import shortUUID from "short-uuid";
 import TopUpController from "@/controllers/topUpController";
 import MainController from "@/controllers/mainController";
-import { redis } from "@/redis";
+import {connection, redis} from "@/redis";
 
 
 export default class TopUpQueue {
     queue: Queue;
 
     constructor() {
-        this.queue = new Queue("topups", { connection: { host: "redis", port: 6379 } });
+        this.queue = new Queue("topups", {connection});
         this.workers()
     }
 
@@ -20,7 +20,7 @@ export default class TopUpQueue {
             const name = job.name.split("@")[0]
             switch (name) {
                 case "queueTopUp": {
-                    await TopUpController.createTopUp(job.asJSON())                
+                    await TopUpController.createTopUp(job.asJSON())
                     break;
                 }
                 case "pendingTopUp": {
@@ -34,13 +34,13 @@ export default class TopUpQueue {
             }
 
         } catch (error) {
-            console.log({ executeJob: error });
+            console.log({executeJob: error});
         }
     }
 
     private workers = async () => {
         const worker = new Worker('topups', async (job) => this.executeJob(job), {
-            connection: { host: "redis", port: 6379 },
+            connection,
             settings: {
                 backoffStrategy: (attemptsMade: number) => attemptsMade * 1000
             }
@@ -57,13 +57,18 @@ export default class TopUpQueue {
                 console.log(`Job ${job.id} completed:`);
 
             } catch (error: any) {
-                console.log({ queueTopUp: error });
+                console.log({queueTopUp: error});
 
             }
         })
     }
 
-    createJobs = async ({ jobId, jobName, jobTime, data }: { jobId: string, jobName: string, jobTime: string, data: string }) => {
+    createJobs = async ({jobId, jobName, jobTime, data}: {
+        jobId: string,
+        jobName: string,
+        jobTime: string,
+        data: string
+    }) => {
         switch (jobName) {
             case "weekly": {
                 await this.addJob(jobId, data, CRON_JOB_WEEKLY_PATTERN[jobTime as WeeklyQueueTitleType]);
@@ -79,7 +84,7 @@ export default class TopUpQueue {
             }
             case "pendingTopUp": {
                 const time = 1000 * 60 * 30 // 30 minutes
-                await this.queue.add(jobId, data, { delay: time, repeat: { every: time }, jobId, removeOnComplete: true });
+                await this.queue.add(jobId, data, {delay: time, repeat: {every: time}, jobId, removeOnComplete: true});
                 break;
             }
             case "queueTopUp": {
@@ -96,7 +101,7 @@ export default class TopUpQueue {
     }
 
     addJob = async (jobName: string, data: string, pattern: string) => {
-        const job = await this.queue.upsertJobScheduler(jobName, { tz: "EST", pattern }, { data });
+        const job = await this.queue.upsertJobScheduler(jobName, {tz: "EST", pattern}, {data});
         return job
     }
 

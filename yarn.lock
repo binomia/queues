@@ -2387,10 +2387,10 @@ create-require@^1.1.0:
   resolved "https://registry.npmjs.org/create-require/-/create-require-1.1.1.tgz"
   integrity sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==
 
-cromio@^0.0.15:
-  version "0.0.15"
-  resolved "https://registry.yarnpkg.com/cromio/-/cromio-0.0.15.tgz#937a4806e7157ce2c4be856adc19496bb07af1a3"
-  integrity sha512-vnkxY8clsTVTKQQTdfdbHWQ46Qh/PdT0zkc3T35NdXxj4VqNAexwPqXo2BVvOxFWlESg+i7CFY2ydqD1y/3whw==
+cromio@^0.0.16:
+  version "0.0.16"
+  resolved "https://registry.yarnpkg.com/cromio/-/cromio-0.0.16.tgz#dbec7c9adb21c2479170e40bde124f944daae2d9"
+  integrity sha512-gkJzoYtxhgJaYFUw3Zf8KzmlB2mJdmx6HriUIJpIxRP/jBsPZRDwfMPFxldGx/uGe+Ru09O+N2uu7JaPMQnImQ==
   dependencies:
     "@opentelemetry/api" "^1.9.0"
     "@opentelemetry/auto-instrumentations-node" "^0.55.3"

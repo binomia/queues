@@ -7,7 +7,6 @@
     "start": "ts-node --exec -r tsconfig-paths/register app.ts",
     "dev": "nodemon --exec ts-node -r tsconfig-paths/register app.ts"
   },
-  
   "dependencies": {
     "@bull-board/express": "^6.5.0",
     "@googlemaps/google-maps-services-js": "^3.4.0",
@@ -38,7 +37,7 @@
     "bullmq": "5.40.2",
     "bullmq-otel": "^1.0.1",
     "cors": "^2.8.5",
-    "cromio": "^0.0.15",
+    "cromio": "^0.0.16",
     "crypto-js": "^4.2.0",
     "cryptografia": "^0.0.16",
     "date-fns": "^4.1.0",

@@ -1,9 +1,9 @@
-import { topUpQueue } from "@/queues";
-import { ServerHelpers, ServerTypes } from "cromio";
+import {topUpQueue} from "@/queues";
+import {triggerDefinition, ServerTypes} from "cromio";
 import shortUUID from "short-uuid";
 
 
-const topUp = ServerHelpers.triggerDefinition()
+const topUp = triggerDefinition()
 
 topUp.onTrigger("createTopUp", async ({body}: ServerTypes.OnTriggerType) => {
     try {
@@ -21,7 +21,7 @@ topUp.onTrigger("createTopUp", async ({body}: ServerTypes.OnTriggerType) => {
         return job.asJSON().id
 
     } catch (error) {
-        console.log({ createTransaction: error });
+        console.log({createTransaction: error});
         throw error
     }
 })

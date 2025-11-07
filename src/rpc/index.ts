@@ -1,20 +1,19 @@
-import { topUpQueue, transactionsQueue } from "@/queues";
-import { JSONRPCServer } from "json-rpc-2.0";
-import { connection, redis } from "@/redis";
-import { QUEUE_JOBS_NAME, ZERO_ENCRYPTION_KEY } from "@/constants";
-import { Queue } from "bullmq";
-import { topUpMethods } from "./topupRPC";
-import { AES } from "cryptografia";
-
+import {topUpQueue, transactionsQueue} from "@/queues";
+import {JSONRPCServer} from "json-rpc-2.0";
+import {connection, redis} from "@/redis";
+import {QUEUE_JOBS_NAME, ZERO_ENCRYPTION_KEY} from "@/constants";
+import {Queue} from "bullmq";
+import {topUpMethods} from "./topupRPC";
+import {AES} from "cryptografia";
 
 
 export const initMethods = (server: JSONRPCServer) => {
     topUpMethods(server)
 
-    // gloabal methods
-    server.addMethod("test", async ({ userId }: { userId: number }) => {
+    // global methods
+    server.addMethod("test", async ({userId}: { userId: number }) => {
         try {
-            const queue = new Queue("transactions", { connection });
+            const queue = new Queue("transactions", {connection});
 
             const getJobs = await queue.getJobs(["delayed"])
 
@@ -35,14 +34,14 @@ export const initMethods = (server: JSONRPCServer) => {
             return jobs.flat()
 
         } catch (error: any) {
-            console.log({ error });
+            console.log({error});
             throw new Error(error);
         }
     });
 
-    server.addMethod("getJob", async ({ userId }: { userId: string }) => {
+    server.addMethod("getJob", async ({userId}: { userId: string }) => {
         try {
-            const queue = new Queue("topups", { connection });
+            const queue = new Queue("topups", {connection});
             const getJobs = await queue.getJobs(["delayed"])
 
             const jobs = await Promise.all(
@@ -62,7 +61,7 @@ export const initMethods = (server: JSONRPCServer) => {
             return jobs.flat()
 
         } catch (error: any) {
-            console.log({ error });
+            console.log({error});
             throw new Error(error);
         }
     });
@@ -72,12 +71,12 @@ export const initMethods = (server: JSONRPCServer) => {
         try {
             const keys = await redis.keys('bull:*:meta')
             const queueNames = keys.map(key => key.split(':')[1]);
-            const queues = queueNames.map(name => new Queue(name, { connection: { host: "redis", port: 6379 } }));
+            const queues = queueNames.map(name => new Queue(name, {connection: {host: "redis", port: 6379}}));
 
-            const jobs = await Promise.all(queues.map(async (queue) => {
+            return await Promise.all(queues.map(async (queue) => {
                 const getJobs = await queue.getJobs()
                 await Promise.all(
-                    getJobs.map(async ({ repeatJobKey, queueQualifiedName }) => {
+                    getJobs.map(async ({repeatJobKey, queueQualifiedName}) => {
                         if (repeatJobKey) {
                             if (queueQualifiedName === "bull:topups")
                                 await topUpQueue.removeJob(repeatJobKey)
@@ -91,10 +90,8 @@ export const initMethods = (server: JSONRPCServer) => {
                 return "All jobs deleted";
             }));
 
-            return jobs
-
         } catch (error: any) {
-            console.log({ error });
+            console.log({error});
             throw new Error(error);
         }
 
@@ -103,7 +100,7 @@ export const initMethods = (server: JSONRPCServer) => {
     server.addMethod("getQueuesWithJobs", async () => {
         const keys = await redis.keys('bull:*:meta')
         const queueNames = keys.map(key => key.split(':')[1]);
-        const queues = queueNames.map(name => new Queue(name, { connection: { host: "redis", port: 6379 } }));
+        const queues = queueNames.map(name => new Queue(name, {connection: {host: "redis", port: 6379}}));
 
         const jobs = await Promise.all(queues.map(async (queue) => {
             const name = queue.name
@@ -117,7 +114,7 @@ export const initMethods = (server: JSONRPCServer) => {
                 }))
             )
 
-            return { name, jobs };
+            return {name, jobs};
         }));
 
         return jobs
@@ -131,7 +128,7 @@ export const initMethods = (server: JSONRPCServer) => {
         return queues
     });
 
-    server.addMethod("addQueue", async ({ queueName }: { queueName: string }) => {
+    server.addMethod("addQueue", async ({queueName}: { queueName: string }) => {
         try {
             await redis.publish(QUEUE_JOBS_NAME.CREATE_NEW_QUEUE, queueName)
             return queueName

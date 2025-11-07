@@ -1,17 +1,16 @@
-import { connection } from "@/redis";
-import { Queue } from "bullmq";
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import {connection} from "@/redis";
+import {Queue} from "bullmq";
+import {BullMQAdapter} from '@bull-board/api/bullMQAdapter';
 import TransactionsQueue from "./transactionQueues";
 import TopUpQueue from "./topUpQueues";
 
 export const createQueue = (name: string): Queue => {
-    const queue = new Queue(name, { connection });
-    return queue
+    return new Queue(name, {connection})
 }
 
 export const transactionsQueue = new TransactionsQueue()
 export const topUpQueue = new TopUpQueue()
-const queue = new Queue("notifications", { connection: { host: "redis", port: 6379 } });
+const queue = new Queue("notifications", { connection });
 
 
 export const queuesBullAdapter = [

@@ -12,13 +12,13 @@ export const clients = [
 ]
 
 
-const key = fs.readFileSync(path.join(__dirname, '../../certs/server/key.pem'))
-const cert = fs.readFileSync(path.join(__dirname, '../../certs/server/cert.pem'))
-const ca = fs.readFileSync(path.join(__dirname, '../../certs/ca.pem'))
+// const key = fs.readFileSync(path.join(__dirname, '../../certs/server/key.pem'))
+// const cert = fs.readFileSync(path.join(__dirname, '../../certs/server/cert.pem'))
+// const ca = fs.readFileSync(path.join(__dirname, '../../certs/ca.pem'))
 export const mTLS = {
-    key,
-    cert,
-    ca,
+    // key,
+    // cert,
+    // ca,
     requestCert: true,
     rejectUnauthorized: true
 }
