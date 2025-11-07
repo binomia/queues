@@ -95,7 +95,7 @@ export default class TransactionController {
             }), ZERO_ENCRYPTION_KEY);
 
             const jobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
-            notificationsQueue.add(jobId, transactionEncryptedData, {
+            await notificationsQueue.add(jobId, transactionEncryptedData, {
                 jobId,
                 attempts: 3,
                 backoff: {
@@ -459,7 +459,7 @@ export default class TransactionController {
                 }), ZERO_ENCRYPTION_KEY);
 
                 const transactionJobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
-                notificationsQueue.add(transactionJobId, notificationEncryptedData, {
+                await notificationsQueue.add(transactionJobId, notificationEncryptedData, {
                     jobId: transactionJobId,
                     attempts: 3,
                     backoff: {

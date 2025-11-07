@@ -1,10 +1,6 @@
 import { FLOAT, STRING, JSONB } from "sequelize"
 import { db } from "@/config"
 
-// transactionId
-// senderId
-// receiverId
-
 const LedgerModel = db.define('ledger', {
     amount: {
         type: FLOAT,

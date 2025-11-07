@@ -5,7 +5,7 @@ import { JobJson } from "bullmq";
 import { Op } from "sequelize";
 import { TopUpSchema } from "@/auth/topUpSchema";
 import { topUpQueue } from "@/queues";
-import { AES, HASH, RSA, ECC } from "cryptografia";
+import { AES, HASH, ECC } from "cryptografia";
 
 
 export default class TopUpController {

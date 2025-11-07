@@ -102,7 +102,7 @@ export const initMethods = (server: JSONRPCServer) => {
         const queueNames = keys.map(key => key.split(':')[1]);
         const queues = queueNames.map(name => new Queue(name, {connection: {host: "redis", port: 6379}}));
 
-        const jobs = await Promise.all(queues.map(async (queue) => {
+        return await Promise.all(queues.map(async (queue) => {
             const name = queue.name
             const getJobs = await queue.getJobs()
 
@@ -115,17 +115,12 @@ export const initMethods = (server: JSONRPCServer) => {
             )
 
             return {name, jobs};
-        }));
-
-        return jobs
+        }))
     });
 
     server.addMethod("getQueues", async () => {
         const keys = await redis.keys('bull:*:meta')
-        const queues = keys.map(key => key.split(':')[1]);
-
-
-        return queues
+        return keys.map(key => key.split(':')[1])
     });
 
     server.addMethod("addQueue", async ({queueName}: { queueName: string }) => {

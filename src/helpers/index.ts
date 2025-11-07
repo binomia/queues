@@ -1,17 +1,16 @@
-import { Request, Response } from 'express';
-import { nextFriday, nextMonday, nextSaturday, nextSunday, nextThursday, nextTuesday, nextWednesday } from "date-fns";
-import { WeeklyQueueTitleType } from '@/types';
-import { Client } from '@googlemaps/google-maps-services-js';
+import {Request, Response} from 'express';
+import {nextFriday, nextMonday, nextSaturday, nextSunday, nextThursday, nextTuesday, nextWednesday} from "date-fns";
+import {WeeklyQueueTitleType} from '@/types';
+import {Client} from '@googlemaps/google-maps-services-js';
 import axios from 'axios';
-import { GOOGLE_MAPS_API_KEY } from '@/constants';
+import {GOOGLE_MAPS_API_KEY} from '@/constants';
 import * as zlib from 'zlib';
-import { LedgerModel } from '@/models';
-import { Queue } from 'bullmq';
-import { connection } from '@/redis';
+import {LedgerModel} from '@/models';
+import {Queue} from 'bullmq';
+import {connection} from '@/redis';
 
 
 export const notificationsQueue = new Queue("notifications", { connection });
-
 
 export const insertLadger = async ({ sender, receiver }: any) => {
     try {
@@ -43,7 +42,7 @@ export function decompressData(data: Buffer): Promise<string> {
     });
 }
 
-export const unAuthorizedResponse = (req: Request, res: Response) => {
+export const unAuthorizedResponse = (_req: Request, res: Response) => {
     res.status(401).json({
         jsonrpc: "2.0",
         error: {
@@ -244,13 +243,11 @@ export const fetchGeoLocation = async ({ latitude, longitude }: { latitude: numb
 
         }, null);
 
-        const address = {
+        return {
             ...found,
             latitude,
             longitude
         }
-
-        return address
 
     } catch (error: any) {
         console.error("Reverse geocoding error:", error);

@@ -4,7 +4,7 @@ import {CRON_JOB_BIWEEKLY_PATTERN, CRON_JOB_MONTHLY_PATTERN, CRON_JOB_WEEKLY_PAT
 import shortUUID from "short-uuid";
 import TopUpController from "@/controllers/topUpController";
 import MainController from "@/controllers/mainController";
-import {connection, redis} from "@/redis";
+import {connection} from "@/redis";
 
 
 export default class TopUpQueue {
@@ -12,7 +12,7 @@ export default class TopUpQueue {
 
     constructor() {
         this.queue = new Queue("topups", {connection});
-        this.workers()
+        this.workers().catch((_) => {})
     }
 
     private executeJob = async (job: Job) => {
@@ -101,16 +101,14 @@ export default class TopUpQueue {
     }
 
     addJob = async (jobName: string, data: string, pattern: string) => {
-        const job = await this.queue.upsertJobScheduler(jobName, {tz: "EST", pattern}, {data});
-        return job
+        return await this.queue.upsertJobScheduler(jobName, {tz: "EST", pattern}, {data})
     }
 
     removeJob = async (repeatJobKey: string, newStatus: string = "cancelled") => {
         try {
             const job = await this.queue.removeJobScheduler(repeatJobKey)
             if (job) {
-                const transaction = await MainController.inactiveTransaction(repeatJobKey, newStatus)
-                return transaction;
+                return await MainController.inactiveTransaction(repeatJobKey, newStatus);
             }
 
             throw "Job not found"
@@ -129,14 +127,12 @@ export default class TopUpQueue {
 
             const queue = await MainController.inactiveTransaction(repeatJobKey, "cancelled")
 
-            const newJob = await this.createJobs({
+            return await this.createJobs({
                 jobId: `${jobName}@${jobTime}@${shortUUID.generate()}${shortUUID.generate()}`,
                 jobName,
                 jobTime,
                 data: queue.data,
-            })
-
-            return newJob;
+            });
 
         } catch (error: any) {
             throw error.toString()

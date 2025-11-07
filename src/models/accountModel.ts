@@ -2,7 +2,6 @@ import { db } from "@/config";
 import { STRING, FLOAT, BOOLEAN } from "sequelize";
 import short from 'short-uuid';
 
-
 const AccountModel = db.define('accounts', {
     balance: {
         type: FLOAT,

@@ -1,16 +1,17 @@
-import { Job, JobJson, Queue, Worker } from "bullmq";
-import { CancelRequestedTransactionType, CreateBankingTransactionType, CreateQueueedTransactionType, CreateRequestQueueedTransactionType, MonthlyQueueTitleType, PayQueuedRequestedTransactionType, WeeklyQueueTitleType } from "@/types";
-import { CRON_JOB_BIWEEKLY_PATTERN, CRON_JOB_MONTHLY_PATTERN, CRON_JOB_WEEKLY_PATTERN, ZERO_ENCRYPTION_KEY } from "@/constants";
+import {Job, JobJson, Queue, Worker} from "bullmq";
+import {CancelRequestedTransactionType, CreateQueueedTransactionType, CreateRequestQueueedTransactionType, MonthlyQueueTitleType, PayQueuedRequestedTransactionType, WeeklyQueueTitleType} from "@/types";
+import {CRON_JOB_BIWEEKLY_PATTERN, CRON_JOB_MONTHLY_PATTERN, CRON_JOB_WEEKLY_PATTERN, ZERO_ENCRYPTION_KEY} from "@/constants";
 import shortUUID from "short-uuid";
 import TransactionController from "@/controllers/transactionController";
 import MainController from "@/controllers/mainController";
-import { connection } from "@/redis";
-import { AES } from "cryptografia";
-import { BullMQOtel } from "bullmq-otel"
+import {connection} from "@/redis";
+import {AES} from "cryptografia";
+import {BullMQOtel} from "bullmq-otel"
 
 
 export default class TransactionsQueue {
     queue: Queue;
+
     constructor() {
         this.queue = new Queue("transactions", {
 
@@ -42,9 +43,11 @@ export default class TransactionsQueue {
                 }
                 case job.name.includes("pendingTransaction"): {
                     const status = await TransactionController.pendingTransaction(job)
-                    if (status === "completed")
-                        if (job.repeatJobKey)
-                            this.removeJob(job.repeatJobKey, "completed")
+                    if (status === "completed") {
+                        if (job.repeatJobKey) {
+                            await this.removeJob(job.repeatJobKey, "completed")
+                        }
+                    }
                     break;
                 }
                 case job.name.includes("payRequestTransaction"): {
@@ -72,12 +75,12 @@ export default class TransactionsQueue {
             }
 
         } catch (error) {
-            console.log({ executeJob: error });
+            console.log({executeJob: error});
         }
     }
 
-    private workers = async () => {
-        const worker = new Worker('transactions', async (job) => this.executeJob(job.asJSON()), {
+    private workers = () => {
+        const worker = new Worker('transactions', (job) => this.executeJob(job.asJSON()), {
             connection,
             removeOnComplete: {
                 age: 20
@@ -92,17 +95,17 @@ export default class TransactionsQueue {
                 await job.remove()
 
             } catch (error) {
-                console.log({ completed: error });
+                console.log({completed: error});
             }
         })
     }
 
-    createJobs = async ({ jobId, referenceData, jobName, jobTime, amount, userId, data }: { jobId: string, referenceData: any, userId: number, amount: number, jobName: string, jobTime: string, data: any }) => {
+    createJobs = async ({jobId, referenceData, jobName, jobTime, amount, userId, data}: { jobId: string, referenceData: any, userId: number, amount: number, jobName: string, jobTime: string, data: any }) => {
         try {
             switch (jobName) {
                 case "weekly": {
                     const job = await this.addJob(jobId, data, CRON_JOB_WEEKLY_PATTERN[jobTime as WeeklyQueueTitleType]);
-                    const transaction = await MainController.createQueue(Object.assign(job.asJSON(), {
+                    return await MainController.createQueue(Object.assign(job.asJSON(), {
                         queueType: "transaction",
                         jobTime,
                         jobName,
@@ -111,12 +114,10 @@ export default class TransactionsQueue {
                         data,
                         referenceData
                     }))
-
-                    return transaction
                 }
                 case "biweekly": {
                     const job = await this.addJob(jobId, data, CRON_JOB_BIWEEKLY_PATTERN);
-                    const transaction = await MainController.createQueue(Object.assign(job.asJSON(), {
+                    return await MainController.createQueue(Object.assign(job.asJSON(), {
                         queueType: "transaction",
                         jobTime,
                         jobName,
@@ -125,12 +126,10 @@ export default class TransactionsQueue {
                         data,
                         referenceData
                     }))
-
-                    return transaction
                 }
                 case "monthly": {
                     const job = await this.addJob(jobId, data, CRON_JOB_MONTHLY_PATTERN[jobTime as MonthlyQueueTitleType]);
-                    const transaction = await MainController.createQueue(Object.assign(job.asJSON(), {
+                    return await MainController.createQueue(Object.assign(job.asJSON(), {
                         queueType: "transaction",
                         jobTime,
                         jobName,
@@ -139,8 +138,6 @@ export default class TransactionsQueue {
                         data,
                         referenceData
                     }))
-
-                    return transaction
                 }
                 case "pendingTransaction": {
                     const time = 1000 * 60 * 30
@@ -148,7 +145,7 @@ export default class TransactionsQueue {
                         jobId,
                         repeatJobKey: jobId,
                         delay: time,
-                        repeat: { every: time, },
+                        repeat: {every: time,},
                         removeOnComplete: {
                             age: 60 * 30
                         },
@@ -177,13 +174,12 @@ export default class TransactionsQueue {
                 }
             }
         } catch (error) {
-            console.log({ createJobs: error });
+            console.log({createJobs: error});
         }
     }
 
     addJob = async (jobName: string, data: string, pattern: string) => {
-        const job = await this.queue.upsertJobScheduler(jobName, { tz: "EST", pattern }, { data });
-        return job
+        return await this.queue.upsertJobScheduler(jobName, {tz: "EST", pattern}, {data})
     }
 
     removeJob = async (repeatJobKey: string, newStatus: string = "cancelled") => {
@@ -192,8 +188,7 @@ export default class TransactionsQueue {
             if (!job)
                 throw "Job not found"
 
-            const transaction = await MainController.inactiveTransaction(repeatJobKey, newStatus)
-            return transaction;
+            return await MainController.inactiveTransaction(repeatJobKey, newStatus);
 
         } catch (error: any) {
             throw error.toString()
@@ -207,7 +202,7 @@ export default class TransactionsQueue {
                 throw "error removing job"
 
             const queue = await MainController.inactiveTransaction(repeatJobKey, "cancelled")
-            const newJob = await this.createJobs({
+            return await this.createJobs({
                 jobId: `${jobName}@${jobTime}@${shortUUID.generate()}${shortUUID.generate()}`,
                 amount: queue.amount,
                 jobName,
@@ -215,9 +210,7 @@ export default class TransactionsQueue {
                 userId: queue.userId,
                 data: queue.data,
                 referenceData: queue.referenceData
-            })
-
-            return newJob;
+            });
 
         } catch (error: any) {
             throw error.toString()

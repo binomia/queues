@@ -5,8 +5,7 @@ import {DOCKER_MODE} from "@/constants";
 
 export const connection = {
     host: DOCKER_MODE ? "redis" : "localhost",
-    port: 6379,
-    // enableOfflineQueue: false,
+    port: 6379
 }
 
 

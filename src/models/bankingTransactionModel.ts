@@ -2,7 +2,6 @@ import { STRING, JSONB, DECIMAL, TEXT } from "sequelize"
 import { db } from "@/config"
 import short from "short-uuid"
 
-
 const BankingTransactionsModel = db.define('banking_transactions', {
 	transactionId: {
 		type: STRING,

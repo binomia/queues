@@ -3,7 +3,7 @@ import {DASHBOARD_FAVICON_URL, DASHBOARD_LOGO_URL,} from "@/constants";
 import express, {Express} from 'express';
 import {server as httpServer} from "@/server";
 import {createBullBoard} from '@bull-board/api';
-import {queuesBullAdapter, topUpQueue, transactionsQueue} from "@/queues";
+import {queuesBullAdapter} from "@/queues";
 import {dbConnection} from "@/config";
 import {initTracing} from "@/tracing";
 import {ExpressAdapter} from "@bull-board/express";

@@ -1,11 +1,9 @@
-import { QUEUE_JOBS_NAME, ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY } from "@/constants";
-import { QueuesModel } from "@/models";
-import { createBullBoard } from "@bull-board/api";
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import { JobJson, Queue } from "bullmq";
-import { HASH, RSA } from "cryptografia";
-import { Op } from "sequelize";
-
+import {QUEUE_JOBS_NAME, ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY} from "@/constants";
+import {QueuesModel} from "@/models";
+import {createBullBoard} from "@bull-board/api";
+import {BullMQAdapter} from "@bull-board/api/bullMQAdapter";
+import {JobJson, Queue} from "bullmq";
+import {HASH, RSA} from "cryptografia";
 
 interface RecurrenceTransactionsParams extends JobJson {
     userId: number,
@@ -17,13 +15,12 @@ interface RecurrenceTransactionsParams extends JobJson {
     status?: string
 }
 
-
 export default class MainController {
     static createQueue = async (transactionData: RecurrenceTransactionsParams) => {
         try {
-            const { repeatJobKey, referenceData, userId, queueType, jobTime, status = "active", jobName, amount, id, timestamp, data } = transactionData
+            const {repeatJobKey, referenceData, userId, queueType, jobTime, status = "active", jobName, amount, id, timestamp, data} = transactionData
             const queue = await QueuesModel.findOne({
-                where: { repeatJobKey }
+                where: {repeatJobKey}
             })
 
             if (queue) return
@@ -76,7 +73,7 @@ export default class MainController {
                 repeatedCount: queue.toJSON().repeatedCount + 1
             }
 
-            await queue.update(status !== "cancelled" ? filter : { status })
+            await queue.update(status !== "cancelled" ? filter : {status})
 
             return (await queue.reload()).toJSON()
 
@@ -107,10 +104,10 @@ export default class MainController {
         }
     }
 
-    static listenToRedisEvent = async ({ channel, payload, bullDashboard }: { channel: string, payload: string, bullDashboard: ReturnType<typeof createBullBoard> }) => {
+    static listenToRedisEvent = async ({channel, payload, bullDashboard}: { channel: string, payload: string, bullDashboard: ReturnType<typeof createBullBoard> }) => {
         switch (channel) {
             case QUEUE_JOBS_NAME.CREATE_NEW_QUEUE: {
-                const queue = new Queue(payload, { connection: { host: "redis", port: 6379 } });
+                const queue = new Queue(payload, {connection: {host: "redis", port: 6379}});
                 const adapter = new BullMQAdapter(queue);
 
                 bullDashboard.addQueue(adapter);

@@ -1,9 +1,9 @@
-import { topUpQueue } from "@/queues";
-import { JSONRPCServer } from "json-rpc-2.0";
+import {topUpQueue} from "@/queues";
+import {JSONRPCServer} from "json-rpc-2.0";
 import shortUUID from "short-uuid";
 
 export const topUpMethods = (server: JSONRPCServer) => {
-    server.addMethod("createTopUp", async ({ amount, userId, data }: { amount: number, userId: number, data: any }) => {
+    server.addMethod("createTopUp", async ({data}: { data: any }) => {
         try {
             const jobId = `queueTopUp@${shortUUID.generate()}${shortUUID.generate()}`
             const job = await topUpQueue.queue.add(jobId, data, {
@@ -19,7 +19,7 @@ export const topUpMethods = (server: JSONRPCServer) => {
             return job.asJSON().id
 
         } catch (error) {
-            console.log({ createTransaction: error });
+            console.log({createTransaction: error});
             throw error
         }
     });

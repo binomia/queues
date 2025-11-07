@@ -1,7 +1,5 @@
 import { ZERO_ENCRYPTION_KEY } from "@/constants";
 import { LANGUAGES } from "cromio";
-import fs from 'fs';
-import path from 'path';
 
 export const clients = [
     {
