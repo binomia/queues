@@ -276,7 +276,6 @@ export default class TransactionController {
                     }
                 ]
             })
-
             if (!senderAccount) {
                 throw "Sender account not found";
             }
@@ -294,7 +293,6 @@ export default class TransactionController {
                     }
                 ]
             })
-
             if (!receiverAccount)
                 throw "Receiver account not found";
 
@@ -312,7 +310,6 @@ export default class TransactionController {
 
             if (!senderAccountJSON.allowSend)
                 throw "sender account is not allowed to send money";
-
 
             if (!senderAccountJSON.allowReceive)
                 throw "receiver account is not allowed to receive money";
@@ -346,7 +343,6 @@ export default class TransactionController {
                     }
                 ]
             })
-
             const lastTransactionJSON = lastTransaction?.toJSON()
 
             const distance = !lastTransactionJSON ? 0 : calculateDistance(
@@ -358,7 +354,6 @@ export default class TransactionController {
 
             const timeDifference = !lastTransactionJSON ? 0 : new Date().getTime() - new Date(lastTransactionJSON.createdAt).getTime()
             const speed = calculateSpeed(distance, timeDifference)
-
             const newTransactionData = {
                 transactionId: transaction.transactionId,
                 fromAccount: senderAccountJSON.id,
@@ -425,7 +420,6 @@ export default class TransactionController {
                 ]
             })
 
-
             await transactionsQueue.createJobs({
                 jobId: `trainTransactionFraudDetectionModel@${shortUUID.generate()}${shortUUID.generate()}`,
                 jobName: "trainTransactionFraudDetectionModel",
@@ -457,7 +451,6 @@ export default class TransactionController {
                     senderSocketRoom: senderAccount.toJSON().user.username,
                     recipientSocketRoom: senderAccount.toJSON().user.username
                 }), ZERO_ENCRYPTION_KEY);
-
                 const transactionJobId = `transactionNotification@${shortUUID.generate()}${shortUUID.generate()}`
                 await notificationsQueue.add(transactionJobId, notificationEncryptedData, {
                     jobId: transactionJobId,
@@ -680,7 +673,7 @@ export default class TransactionController {
         }
     }
 
-    static createRequestQueueedTransaction = async ({ sender, receiverUsername, transaction, device }: CreateRequestQueueedTransactionType) => {
+    static createRequestQueuedTransaction = async ({ sender, receiverUsername, transaction, device }: CreateRequestQueueedTransactionType) => {
         try {
             const message = `${transaction.transactionId}&${transaction.amount}@${ZERO_ENCRYPTION_KEY}`
             const hash = await HASH.sha256Async(message)

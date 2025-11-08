@@ -37,7 +37,7 @@ export default class TransactionsQueue {
                     const decryptedData = await AES.decryptAsync(JSON.parse(job.data), ZERO_ENCRYPTION_KEY)
                     const data: CreateRequestQueueedTransactionType = JSON.parse(decryptedData)
 
-                    await TransactionController.createRequestQueueedTransaction(data)
+                    await TransactionController.createRequestQueuedTransaction(data)
                     console.log(`Job ${job.id} completed:`, job.name.split("@")[0]);
                     break;
                 }
