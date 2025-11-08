@@ -9,17 +9,32 @@ import {LedgerModel} from '@/models';
 import {Queue} from 'bullmq';
 import {connection} from '@/redis';
 
+export const safeJSONParse = (data: string): any => {
+    try {
+        return JSON.parse(data);
+    } catch (e) {
+        return {};
+    }
+}
 
-export const notificationsQueue = new Queue("notifications", { connection });
+export const safeJSONStringify = (data: Record<any, any>) => {
+    try {
+        return JSON.stringify(data);
+    } catch (e) {
+        return "{}"
+    }
+}
 
-export const insertLadger = async ({ sender, receiver }: any) => {
+export const notificationsQueue = new Queue("notifications", {connection});
+
+export const insertLedger = async ({sender, receiver}: any) => {
     try {
         await Promise.all([
             LedgerModel.create(sender),
             LedgerModel.create(receiver)
         ])
     } catch (error) {
-        console.log({ insertLadger: error })
+        console.log({insertLadger: error})
     }
 }
 
@@ -109,14 +124,22 @@ export const FORMAT_CURRENCY = (value: number) => {
 
 export const getNextDay = (targetDay: WeeklyQueueTitleType): number => {
     switch (targetDay) {
-        case "everySunday": return nextSunday(new Date().setHours(0, 1, 1, 1)).getTime()
-        case "everyMonday": return nextMonday(new Date().setHours(0, 1, 1, 1)).getTime()
-        case "everyTuesday": return nextTuesday(new Date().setHours(0, 1, 1, 1)).getTime()
-        case "everyWednesday": return nextWednesday(new Date().setHours(0, 1, 1, 1)).getTime()
-        case "everyThursday": return nextThursday(new Date().setHours(0, 1, 1, 1)).getTime()
-        case "everyFriday": return nextFriday(new Date().setHours(0, 0, 0, 1)).getTime()
-        case "everySaturday": return nextSaturday(new Date().setHours(0, 0, 0, 1)).getTime()
-        default: return 0
+        case "everySunday":
+            return nextSunday(new Date().setHours(0, 1, 1, 1)).getTime()
+        case "everyMonday":
+            return nextMonday(new Date().setHours(0, 1, 1, 1)).getTime()
+        case "everyTuesday":
+            return nextTuesday(new Date().setHours(0, 1, 1, 1)).getTime()
+        case "everyWednesday":
+            return nextWednesday(new Date().setHours(0, 1, 1, 1)).getTime()
+        case "everyThursday":
+            return nextThursday(new Date().setHours(0, 1, 1, 1)).getTime()
+        case "everyFriday":
+            return nextFriday(new Date().setHours(0, 0, 0, 1)).getTime()
+        case "everySaturday":
+            return nextSaturday(new Date().setHours(0, 0, 0, 1)).getTime()
+        default:
+            return 0
     }
 }
 
@@ -210,7 +233,7 @@ export const calculateSpeed = (distanceKm: number, timeDiffMs: number): number =
     return +Number(timeDiffHours > 0 ? distanceKm / timeDiffHours : 0).toFixed(2);
 }
 
-export const fetchGeoLocation = async ({ latitude, longitude }: { latitude: number, longitude: number }) => {
+export const fetchGeoLocation = async ({latitude, longitude}: { latitude: number, longitude: number }) => {
     try {
         const client = new Client();
 

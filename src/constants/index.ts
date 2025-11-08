@@ -16,6 +16,16 @@ export const DOCKER_MODE: boolean = process.env.DOCKER_MODE === "true";
 export const DASHBOARD_LOGO_URL: string = "https://res.cloudinary.com/brayhandeaza/image/upload/v1734925393/gwxyuqagrvxxwq2xps6f.png";
 export const DASHBOARD_FAVICON_URL: string = 'https://res.cloudinary.com/brayhandeaza/image/upload/v1731649234/yphdze0x2k2unxwoj6vy.png';
 
+export enum NOTIFICATION_TRIGGERS {
+    PUSH_EXPO_NOTIFICATION = 'pushExpoNotification',
+    SOCKET_EVENT_EMITTER = 'socketEventEmitter',
+}
+
+export enum BULL_MQ_JOBS_NAMES {
+    TRANSACTION_NOTIFICATION = "transactionNotification"
+}
+
+
 export const ANOMALY_THRESHOLD: number = 0.7
 
 export const REDIS_SUBSCRIPTION_CHANNEL = {
@@ -39,7 +49,6 @@ export const QUEUE_JOBS_NAME = {
     REMOVE_TRANSACTION_FROM_QUEUE: "REMOVE_TRANSACTION_FROM_QUEUE"
 }
 
-
 export const NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL = {
     NOTIFICATION_TRANSACTION_CREATED: "NOTIFICATION_TRANSACTION_CREATED",
     NOTIFICATION_QUEUE_TRANSACTION_CREATED: "NOTIFICATION_QUEUE_TRANSACTION_CREATED",
@@ -49,7 +58,6 @@ export const NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL = {
     NOTIFICATION_TRANSACTION_CREATED_FROM_QUEUE: "NOTIFICATION_TRANSACTION_CREATED_FROM_QUEUE",
     NOTIFICATION_TRANSACTION_REQUEST_CANCELED: "NOTIFICATION_TRANSACTION_REQUEST_CANCELED"
 }
-
 
 export const CRON_JOB_EVERY_HALF_HOUR_PATTERN = '0 */30 * * *' // every 30 minutes
 export const CRON_JOB_BIWEEKLY_PATTERN = '0 0 1,16 * *' // every 1st and 16th of the month

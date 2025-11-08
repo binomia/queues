@@ -1,6 +1,6 @@
 import { TransactionJoiSchema } from "@/auth/transactionJoiSchema"
-import { ANOMALY_THRESHOLD, NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL, ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY, ZERO_SIGN_PUBLIC_KEY } from "@/constants"
-import { calculateDistance, calculateSpeed, fetchGeoLocation, FORMAT_CURRENCY, insertLadger, MAKE_FULL_NAME_SHORTEN, notificationsQueue } from "@/helpers"
+import {ANOMALY_THRESHOLD, NOTIFICATION_REDIS_SUBSCRIPTION_CHANNEL, NOTIFICATION_TRIGGERS, ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY, ZERO_SIGN_PUBLIC_KEY} from "@/constants"
+import { calculateDistance, calculateSpeed, fetchGeoLocation, FORMAT_CURRENCY, insertLedger, MAKE_FULL_NAME_SHORTEN, notificationsQueue } from "@/helpers"
 import { AccountModel, BankingTransactionsModel, QueuesModel, SessionModel, TransactionsModel, UsersModel } from "@/models"
 import { transactionsQueue } from "@/queues"
 import { anomalyRpcClient } from "@/rpc/clients/anomalyRPC"
@@ -141,7 +141,7 @@ export default class TransactionController {
         }
     }
 
-    static prosessQueuedTransaction = async ({ repeatJobKey }: JobJson): Promise<string> => {
+    static processQueuedTransaction = async ({ repeatJobKey }: JobJson): Promise<string> => {
         try {
             const queueTransaction = await QueuesModel.findOne({
                 where: {
@@ -255,7 +255,7 @@ export default class TransactionController {
                 }
             }
 
-            await insertLadger(ledgerData)
+            await insertLedger(ledgerData)
             return newStatus
 
         } catch (error) {
@@ -521,7 +521,7 @@ export default class TransactionController {
                     }
                 }
 
-                await insertLadger(ledgerData)
+                await insertLedger(ledgerData)
 
                 const encryptedData = await AES.encryptAsync(JSON.stringify({ transactionId: transactionData.toJSON().transactionId }), ZERO_ENCRYPTION_KEY);
                 const notificationEncryptedData = await AES.encryptAsync(JSON.stringify({
@@ -557,7 +557,7 @@ export default class TransactionController {
                         amount: transaction.amount,
                         data: encryptedData,
                     }),
-                    insertLadger(Object.assign({}, ledgerData, {
+                    insertLedger(Object.assign({}, ledgerData, {
                         sender: {
                             ...ledgerData.sender,
                             status: "pending".toUpperCase()
@@ -610,7 +610,7 @@ export default class TransactionController {
                                 logo: receiverAccount.toJSON().user.profileImageUrl
                             }
                         }),
-                        insertLadger(Object.assign({}, ledgerData, {
+                        insertLedger(Object.assign({}, ledgerData, {
                             sender: {
                                 ...ledgerData.sender,
                                 status: "RECURRING".toUpperCase()
@@ -646,7 +646,7 @@ export default class TransactionController {
 
                 const expoNotificationTokens: { token: string, message: string }[] = receiverSession.map((obj: any) => ({ token: obj.dataValues.expoNotificationToken, message: `${MAKE_FULL_NAME_SHORTEN(receiverAccount.toJSON().user.fullName)} te ha enviado ${FORMAT_CURRENCY(transaction.amount)} pesos` }));
                 const newTransactionNotificationData = {
-                    jobId: `newTransactionNotification@${shortUUID.generate()}${shortUUID.generate()}`,
+                    jobId: `${NOTIFICATION_TRIGGERS.PUSH_EXPO_NOTIFICATION}@${shortUUID.generate()}${shortUUID.generate()}`,
                     data: expoNotificationTokens
                 }
 
@@ -750,7 +750,7 @@ export default class TransactionController {
 
             const expoNotificationTokens: { token: string, message: string }[] = receiverSession.map((obj: any) => ({ token: obj.dataValues.expoNotificationToken, message: `${MAKE_FULL_NAME_SHORTEN(receiverData.user.username)} te ha enviado ${FORMAT_CURRENCY(transaction.amount)} pesos` }));
             const newTransactionNotificationData = {
-                jobId: `newTransactionNotification@${shortUUID.generate()}${shortUUID.generate()}`,
+                jobId: `${NOTIFICATION_TRIGGERS.PUSH_EXPO_NOTIFICATION}@${shortUUID.generate()}${shortUUID.generate()}`,
                 data: expoNotificationTokens
             }
 

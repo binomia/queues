@@ -69,7 +69,7 @@ export default class TransactionsQueue {
                     break;
                 }
                 default: {
-                    await TransactionController.prosessQueuedTransaction(job)
+                    await TransactionController.processQueuedTransaction(job)
                     break;
                 }
             }

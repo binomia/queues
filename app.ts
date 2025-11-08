@@ -1,5 +1,5 @@
 import {initRedisEventSubscription} from "@/redis";
-import {DASHBOARD_FAVICON_URL, DASHBOARD_LOGO_URL,} from "@/constants";
+import {DASHBOARD_FAVICON_URL, DASHBOARD_LOGO_URL, ZERO_ENCRYPTION_KEY,} from "@/constants";
 import express, {Express} from 'express';
 import {server as httpServer} from "@/server";
 import {createBullBoard} from '@bull-board/api';
@@ -7,6 +7,7 @@ import {queuesBullAdapter} from "@/queues";
 import {dbConnection} from "@/config";
 import {initTracing} from "@/tracing";
 import {ExpressAdapter} from "@bull-board/express";
+import {AES} from "cryptografia";
 
 const app: Express = express();
 const serverAdapter = new ExpressAdapter();
