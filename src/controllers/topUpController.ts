@@ -1,5 +1,5 @@
 import shortUUID from "short-uuid";
-import { ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY } from "@/constants";
+import {BINOMIA_TOP_UPS_ACCOUNT_USERNAME, ZERO_ENCRYPTION_KEY, ZERO_SIGN_PRIVATE_KEY} from "@/constants";
 import { AccountModel, QueuesModel, TopUpCompanyModel, TopUpPhonesModel, TopUpsModel, UsersModel } from "@/models";
 import { JobJson } from "bullmq";
 import { Op } from "sequelize";
@@ -9,7 +9,7 @@ import { AES, HASH, ECC } from "cryptografia";
 
 
 export default class TopUpController {
-    static prosessTopUp = async ({ repeatJobKey }: JobJson): Promise<string> => {
+    static processTopUp = async ({ repeatJobKey }: JobJson): Promise<string> => {
         try {
             const queue = await QueuesModel.findOne({
                 where: {
@@ -128,7 +128,7 @@ export default class TopUpController {
             const receiverAccount = await AccountModel.findOne({
                 attributes: { exclude: ['username'] },
                 where: {
-                    username: "$binomia"
+                    username: BINOMIA_TOP_UPS_ACCOUNT_USERNAME
                 }
             })
 

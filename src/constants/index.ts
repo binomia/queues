@@ -8,6 +8,8 @@ export const SENDGRID_API_KEY: string = process.env.SENDGRID_API_KEY || "";
 export const ZERO_SIGN_PUBLIC_KEY: string = process.env.ZERO_SIGN_PUBLIC_KEY || "";
 export const ZERO_SIGN_PRIVATE_KEY: string = process.env.ZERO_SIGN_PRIVATE_KEY || "";
 
+export  const BINOMIA_TOP_UPS_ACCOUNT_USERNAME= process.env.BINOMIA_TOP_UPS_ACCOUNT_USERNAME || "$binomia_topups";
+
 export const NOTIFICATION_SERVER_URL: string = process.env.NOTIFICATION_SERVER_URL || "";
 export const ANOMALY_SERVER_URL: string = process.env.ANOMALY_SERVER_URL || ""
 export const GOOGLE_MAPS_API_KEY: string = process.env.GOOGLE_MAPS_API_KEY || ""

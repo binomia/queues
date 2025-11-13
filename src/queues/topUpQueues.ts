@@ -28,7 +28,7 @@ export default class TopUpQueue {
                     break;
                 }
                 default: {
-                    await TopUpController.prosessTopUp(job.asJSON())
+                    await TopUpController.processTopUp(job.asJSON())
                     break;
                 }
             }
